@@ -1,8 +1,0 @@
-# Database Configuration
-# Copy this file to .env and update with your actual database credentials
-
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=stock_predictor
-DB_USER=postgres
-DB_PASSWORD=your_password_here

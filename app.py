@@ -26,6 +26,34 @@ from plotly.subplots import make_subplots
 import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler
 from dotenv import load_dotenv
+import pkg_resources
+import time
+
+# --- Automatic Dependency Check and Installation ---
+try:
+    with open('requirements.txt') as f:
+        dependencies = f.read().splitlines()
+    pkg_resources.require(dependencies)
+except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
+    st.warning("Missing packages detected. Installing dependencies...")
+    progress_bar = st.progress(0, text="Installing, please wait...")
+    try:
+        subprocess.check_call(
+            [sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        for i in range(100):
+            time.sleep(0.02)
+            progress_bar.progress(i + 1, text="Installation complete. Reloading...")
+        st.success("Dependencies installed! The app will now reload.")
+        time.sleep(2)
+        st.rerun()
+    except Exception as e:
+        st.error(f"Error installing dependencies: {e}")
+        st.info("Please install manually: pip install -r requirements.txt")
+        st.stop()
+# --- End of Dependency Check ---
 
 # Load environment variables
 load_dotenv()
