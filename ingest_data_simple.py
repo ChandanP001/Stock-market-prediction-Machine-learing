@@ -88,24 +88,17 @@ def ingest_stock_data(ticker: str, period: str = "5y") -> bool:
 
 
 def main():
-    """Main function to demonstrate usage or handle command-line execution."""
+    """Main function to handle command-line execution."""
     if len(sys.argv) > 1:
-        # Handle command line execution for the Streamlit app
         ticker = sys.argv[1].upper()
         success = ingest_stock_data(ticker)
         if not success:
             sys.exit(1)
     else:
-        # Example usage when run directly
+        # Example usage for direct run
         ticker = "AAPL"
-        period = "5y"
         logger.info(f"Starting data ingestion for {ticker}")
-        success = ingest_stock_data(ticker, period)
-        if success:
-            logger.info(f"Data ingestion completed successfully for {ticker}")
-        else:
-            logger.error(f"Data ingestion failed for {ticker}")
-            sys.exit(1)
+        ingest_stock_data(ticker)
 
 
 if __name__ == "__main__":
