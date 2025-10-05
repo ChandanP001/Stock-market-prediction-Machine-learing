@@ -414,111 +414,40 @@ class StockPredictorApp:
         # Prediction button
         predict_button = st.sidebar.button("🚀 Get Prediction", type="primary")
         
-        # Training section
+        # --- Training Section in Sidebar ---
         st.sidebar.markdown("---")
         st.sidebar.header("🔧 Train New Model")
-        
-        # Predefined popular tickers
-        popular_tickers = ["GOOGL", "MSFT", "TSLA", "AMZN", "META", "NVDA", "NFLX", "AMD", "INTC", "CRM"]
-        
-        # Get already trained tickers to exclude them
-        trained_tickers = [f.replace('stock_predictor_', '').replace('.keras', '').upper() for f in model_files]
-        available_to_train = [t for t in popular_tickers if t not in trained_tickers]
-        
-        if available_to_train:
-            st.sidebar.write("**Popular tickers to train:**")
-            selected_ticker = st.sidebar.selectbox(
-                "Select Ticker",
-                options=available_to_train,
-                help="Choose from popular tickers that haven't been trained yet"
-            )
-        else:
-            st.sidebar.info("All popular tickers are already trained!")
-            selected_ticker = None
-        
-        # Custom ticker input
-        custom_ticker = st.sidebar.text_input(
-            "Or enter custom ticker",
-            placeholder="e.g., BRK.A, JPM, V",
-            help="Enter any valid ticker symbol"
-        ).upper()
-        
-        # Determine which ticker to use
-        ticker_to_train = custom_ticker if custom_ticker else selected_ticker
-        
-        train_button = st.sidebar.button("🏋️ Train Model", type="secondary", disabled=not ticker_to_train)
-        
-        if train_button and ticker_to_train:
-            with st.spinner(f"Training model for {ticker_to_train}... This may take 2-3 minutes."):
+        new_ticker = st.sidebar.text_input("Enter Ticker to Train (e.g., GOOGL, MSFT)").upper()
+
+        if st.sidebar.button("🏋️ Train Model", disabled=(not new_ticker)):
+            with st.spinner(f"Starting training for {new_ticker}... This will take a few minutes."):
+                # --- Step 1: Ingest Data ---
+                st.sidebar.info(f"Step 1/2: Fetching and saving data for {new_ticker}...")
                 try:
-                    # First ingest data
-                    st.sidebar.info(f"📥 Fetching data for {ticker_to_train}...")
-                    
-                    # Run data ingestion
-                    ingest_result = subprocess.run([
-                        'stock_predictor/venv/Scripts/python.exe',
-                        'ingest_ticker.py',
-                        ticker_to_train
-                    ], 
-                    capture_output=True,
-                    text=True,
-                    cwd=os.getcwd()
+                    # Use sys.executable to find the correct Python interpreter
+                    # and call the simple script directly.
+                    ingest_process = subprocess.run(
+                        [sys.executable, "ingest_data_simple.py", new_ticker],
+                        capture_output=True, text=True, check=True
                     )
-                    
-                    # Check if data ingestion actually succeeded despite potential Unicode errors
-                    output_text = ingest_result.stdout if ingest_result.stdout else ""
-                    success_indicators = ["SUCCESS:", "Successfully ingested", "Data saved to"]
-                    actual_success = any(indicator in output_text for indicator in success_indicators)
-                    
-                    if ingest_result.returncode != 0 and not actual_success:
-                        error_msg = ingest_result.stderr if ingest_result.stderr else "Unknown error"
-                        st.sidebar.error(f"❌ Data ingestion failed: {error_msg}")
-                        # Show debug info
-                        st.sidebar.text(f"Debug - Return code: {ingest_result.returncode}")
-                        st.sidebar.text(f"Debug - Output: {ingest_result.stdout}")
-                        return
-                    elif actual_success:
-                        st.sidebar.success(f"✅ Data ingestion completed for {ticker_to_train}")
-                    else:
-                        st.sidebar.warning(f"⚠️ Data ingestion completed with warnings")
-                    
-                    st.sidebar.info(f"🤖 Training LSTM model for {ticker_to_train}...")
-                    
-                    # Run model training
-                    train_result = subprocess.run([
-                        'stock_predictor/venv/Scripts/python.exe',
-                        'train_ticker.py',
-                        ticker_to_train
-                    ], 
-                    capture_output=True,
-                    text=True,
-                    cwd=os.getcwd()
+                    st.sidebar.success(f"Data for {new_ticker} saved successfully!")
+                    # --- Step 2: Train Model ---
+                    st.sidebar.info(f"Step 2/2: Training the model for {new_ticker}...")
+                    # Use sys.executable again and call the simple training script.
+                    train_process = subprocess.run(
+                        [sys.executable, "train_model_simple.py", new_ticker],
+                        capture_output=True, text=True, check=True
                     )
-                    
-                    # Check if training actually succeeded despite potential Unicode errors
-                    train_output = train_result.stdout if train_result.stdout else ""
-                    train_success_indicators = ["SUCCESS:", "Model training completed successfully", "Model saved as"]
-                    train_actual_success = any(indicator in train_output for indicator in train_success_indicators)
-                    
-                    if train_result.returncode == 0 or train_actual_success:
-                        # Copy model files to main directory
-                        model_file = f'stock_predictor/stock_predictor_{ticker_to_train.lower()}.keras'
-                        scaler_file = f'stock_predictor/scaler_{ticker_to_train.lower()}.pkl'
-                        
-                        if os.path.exists(model_file) and os.path.exists(scaler_file):
-                            import shutil
-                            shutil.copy2(model_file, '.')
-                            shutil.copy2(scaler_file, '.')
-                        
-                        st.sidebar.success(f"✅ {ticker_to_train} model trained successfully!")
-                        st.sidebar.info("🔄 Please refresh the page to see the new model in the dropdown.")
-                        st.rerun()  # Refresh the app
-                    else:
-                        error_msg = train_result.stderr if train_result.stderr else "Unknown error"
-                        st.sidebar.error(f"❌ Training failed: {error_msg}")
-                        
+                    st.sidebar.success(f"Model for {new_ticker} trained successfully!")
+                    st.sidebar.info("App will now reload to include the new model.")
+                    time.sleep(3)
+                    st.rerun()
+                except subprocess.CalledProcessError as e:
+                    # Display a more user-friendly error message
+                    st.sidebar.error(f"An error occurred during the process for {new_ticker}.")
+                    st.sidebar.code(e.stderr, language='bash')
                 except Exception as e:
-                    st.sidebar.error(f"❌ Error: {str(e)}")
+                    st.sidebar.error(f"An unexpected error occurred: {str(e)}")
         
         # Main content
         if predict_button and ticker:
